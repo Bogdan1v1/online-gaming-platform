@@ -8,7 +8,7 @@ function GameCard({ game, theme, user }) {
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Отримання середнього рейтингу і коментарів
+  // Отримання середнього рейтингу і коментарів при завантаженні компонента
   useEffect(() => {
     const fetchAverageRating = async () => {
       try {
@@ -36,7 +36,7 @@ function GameCard({ game, theme, user }) {
     fetchComments();
   }, [game.id]);
 
-  // Обробка надсилання коментаря
+  // Обробка надсилання нового коментаря
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!user || !newComment.trim() || isSubmitting) return;
@@ -69,16 +69,30 @@ function GameCard({ game, theme, user }) {
     }
   };
 
+  // Функція для конвертації Firestore Timestamp у дату
+  const parseTimestamp = (timestamp) => {
+    if (typeof timestamp === 'string') {
+      // Якщо timestamp уже у форматі ISO рядка
+      return new Date(timestamp);
+    } else if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+      // Якщо timestamp — це об’єкт Firestore { seconds, nanoseconds }
+      return new Date(timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000);
+    }
+    // Якщо формат невідомий, повертаємо поточну дату як запасний варіант
+    return new Date();
+  };
+
   return (
     <div
       className={`p-6 rounded-2xl ${theme === 'dark' ? 'bg-gray-800 border border-cyan-400/50 shadow-[0_0_15px_rgba(0,255,255,0.5)] hover:bg-gray-700 hover:border-cyan-300 hover:shadow-[0_0_25px_rgba(0,255,255,0.7)]' : 'bg-white border border-blue-200 shadow-xl hover:bg-blue-50 hover:border-blue-400 hover:shadow-2xl'} hover:scale-105 transition-all duration-300 flex flex-col sm:flex-row sm:items-start gap-4`}
     >
+      {/* Фото гри: квадратне і зліва на великих екранах */}
       <img
         src={game.image}
         alt={game.title}
-        className="w-full sm:w-32 sm:h-32 h-48 sm:aspect-square object-cover rounded-lg"
+        className="w-full sm:w-32 sm:h-32 h-48 sm:aspect-square object-cover rounded-lg shrink-0"
       />
-      <div className="flex-1 flex flex-col justify-between">
+      <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
           <h2 className={`${theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'} text-xl font-bold mb-2`}>
             {game.title}
@@ -90,6 +104,7 @@ function GameCard({ game, theme, user }) {
         </div>
         <div className="flex flex-col gap-4">
           <StarRating gameId={game.id} theme={theme} user={user} />
+          {/* Секція коментарів */}
           <div className="mt-4">
             <h3 className={`${theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'} text-lg font-semibold mb-2`}>Коментарі</h3>
             {comments.length === 0 ? (
@@ -100,7 +115,9 @@ function GameCard({ game, theme, user }) {
                   <li key={comment.id} className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded-lg`}>
                     <p className={`${theme === 'dark' ? 'text-cyan-300' : 'text-blue-800'} font-medium`}>{comment.displayName}</p>
                     <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{comment.comment}</p>
-                    <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} text-sm`}>{new Date(comment.timestamp).toLocaleString()}</p>
+                    <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} text-sm`}>
+                      {parseTimestamp(comment.timestamp).toLocaleString()}
+                    </p>
                   </li>
                 ))}
               </ul>
